@@ -1,0 +1,41 @@
+# ─────────────────────────────────────────────────────────────
+# Azure Functions
+# ─────────────────────────────────────────────────────────────
+bin/
+obj/
+local.settings.json
+.azure/
+.azurefunctions/
+.python_packages/
+__azurite_db_*__.json
+__blobstorage__/
+__queuestorage__/
+
+# Note: the PowerShell managed-dependency cache that the Functions host creates
+# at runtime is named `Modules/`. We intentionally do NOT add it here because
+# macOS uses a case-insensitive filesystem by default, and any such pattern
+# would also exclude the source `modules/` folder that ships in this repo.
+
+# ─────────────────────────────────────────────────────────────
+# Scan output (may contain real subscription / tenant / principal IDs)
+# ─────────────────────────────────────────────────────────────
+last-scan-report.json
+orphaned-roles-report_*.json
+*.scan-report.json
+
+# ─────────────────────────────────────────────────────────────
+# Editors / OS
+# ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ─────────────────────────────────────────────────────────────
+# Logs / temp
+# ─────────────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak

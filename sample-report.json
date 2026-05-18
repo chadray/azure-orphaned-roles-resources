@@ -1,0 +1,64 @@
+{
+  "ReportMetadata": {
+    "GeneratedAt": "2025-01-01T00:00:00.0000000Z",
+    "ScanScope": "/subscriptions/00000000-0000-0000-0000-000000000000",
+    "DryRunMode": true,
+    "TotalOrphaned": 3,
+    "OrphanedByType": {
+      "OrphanedPrincipal": 2,
+      "OrphanedScope": 1
+    },
+    "DetectionStatusBreakdown": {
+      "Confirmed": 2,
+      "Suspected": 1
+    }
+  },
+  "OrphanedAssignments": [
+    {
+      "RoleAssignmentId": "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Authorization/roleAssignments/11111111-1111-1111-1111-111111111111",
+      "RoleDefinitionName": "Reader",
+      "RoleDefinitionId": "acdd72a7-3385-48ef-bd42-f606fba81ae7",
+      "PrincipalId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "PrincipalType": "Unknown",
+      "DisplayName": null,
+      "SignInName": null,
+      "Scope": "/subscriptions/00000000-0000-0000-0000-000000000000",
+      "OrphanReasons": "OrphanedPrincipal",
+      "DetectionStatus": "Confirmed",
+      "CanSafelyDelete": true,
+      "ValidationNotes": "",
+      "ScannedAt": "2025-01-01T00:00:00.0000000Z"
+    },
+    {
+      "RoleAssignmentId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/sample-rg/providers/Microsoft.Authorization/roleAssignments/22222222-2222-2222-2222-222222222222",
+      "RoleDefinitionName": "Contributor",
+      "RoleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c",
+      "PrincipalId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "PrincipalType": "Unknown",
+      "DisplayName": null,
+      "SignInName": null,
+      "Scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/sample-rg",
+      "OrphanReasons": "OrphanedPrincipal",
+      "DetectionStatus": "Confirmed",
+      "CanSafelyDelete": true,
+      "ValidationNotes": "",
+      "ScannedAt": "2025-01-01T00:00:00.0000000Z"
+    },
+    {
+      "RoleAssignmentId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/deleted-rg/providers/Microsoft.Authorization/roleAssignments/33333333-3333-3333-3333-333333333333",
+      "RoleDefinitionName": "Storage Blob Data Reader",
+      "RoleDefinitionId": "2a2b9908-6ea1-4ae2-8e65-a410df84e7d1",
+      "PrincipalId": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "PrincipalType": "ServicePrincipal",
+      "DisplayName": "sample-managed-identity",
+      "SignInName": null,
+      "Scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/deleted-rg",
+      "OrphanReasons": "OrphanedScope",
+      "DetectionStatus": "Suspected",
+      "CanSafelyDelete": false,
+      "ValidationNotes": "Scope validation returned NotFound; principal still exists",
+      "ScannedAt": "2025-01-01T00:00:00.0000000Z"
+    }
+  ],
+  "CleanupResults": []
+}

@@ -1,0 +1,14 @@
+.git*
+.vscode
+.idea
+.DS_Store
+local.settings.json
+test
+tests
+scripts
+last-scan-report.json
+sample-report.json
+*.scan-report.json
+README.md
+CONTRIBUTING.md
+LICENSE
