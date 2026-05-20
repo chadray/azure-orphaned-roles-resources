@@ -25,6 +25,32 @@ Every run produces a JSON report with:
 
 Reports are written to Function App logs and optionally to Azure Blob Storage.
 
+### Converting Reports to CSV / HTML
+
+The `scripts/convert-report.py` script converts a JSON report into user-friendly CSV and HTML formats. No external dependencies — just Python 3.
+
+```bash
+# Generate both CSV and HTML (default)
+python3 scripts/convert-report.py sample-report.json
+
+# CSV only
+python3 scripts/convert-report.py report.json --no-html
+
+# HTML only
+python3 scripts/convert-report.py report.json --no-csv
+
+# Custom output paths
+python3 scripts/convert-report.py report.json --csv results.csv --html results.html
+```
+
+**HTML report** — self-contained dashboard with summary cards and a color-coded table (green = safe to delete, yellow = needs review):
+
+![HTML report example](docs/images/html-report.png)
+
+**CSV report** — flat table that opens directly in Excel, Google Sheets, or any spreadsheet tool. Includes shortened IDs, friendly scope names, and clear Yes/No safe-to-delete values:
+
+![CSV report example](docs/images/csv-report.png)
+
 ## Safety Features
 
 - **Dry-run by default** — no deletions occur unless explicitly enabled via app settings
@@ -138,9 +164,14 @@ Default: daily at 6:00 AM UTC (`0 0 6 * * *`). Modify in `TimerTriggerOrphanedRo
 ├── local.settings.json.sample             # Template for local dev settings
 ├── sample-report.json                     # Example scan report (sanitized)
 ├── .funcignore                            # Files excluded from func publish
+├── docs/
+│   └── images/                            # Screenshots for README
+│       ├── html-report.png
+│       └── csv-report.png
 ├── modules/
 │   └── OrphanedRoleAssignments.psm1       # Core logic (reusable module)
 ├── scripts/
+│   ├── convert-report.py                  # JSON → CSV / HTML converter
 │   └── test-scan.ps1                      # Local dry-run harness
 └── TimerTriggerOrphanedRoles/
     ├── function.json                      # Timer trigger binding
