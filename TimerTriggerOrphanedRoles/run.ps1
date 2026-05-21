@@ -110,26 +110,39 @@ Write-Information ("SUMMARY: Total orphaned={0} | Principals={1} | Scopes={2} | 
 
 # ── Optional: Write report to blob storage ──
 $blobContainer = $env:REPORT_OUTPUT_BLOB_CONTAINER
+$storageAccountName = $env:AzureWebJobsStorage__accountName
 $storageConnStr = $env:AzureWebJobsStorage
 
-if ($blobContainer -and $storageConnStr -and $storageConnStr -ne 'UseDevelopmentStorage=true') {
+if ($blobContainer) {
     try {
         $timestamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
         $blobName = "orphaned-roles-report_$timestamp.json"
 
-        $ctx = New-AzStorageContext -ConnectionString $storageConnStr
-        $tempFile = [System.IO.Path]::GetTempFileName()
-        $reportJson | Out-File -FilePath $tempFile -Encoding UTF8
+        # Use managed identity if available, fall back to connection string
+        if ($storageAccountName) {
+            $ctx = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount
+        }
+        elseif ($storageConnStr -and $storageConnStr -ne 'UseDevelopmentStorage=true') {
+            $ctx = New-AzStorageContext -ConnectionString $storageConnStr
+        }
+        else {
+            $ctx = $null
+        }
 
-        Set-AzStorageBlobContent `
-            -Container $blobContainer `
-            -File $tempFile `
-            -Blob $blobName `
-            -Context $ctx `
-            -Force | Out-Null
+        if ($ctx) {
+            $tempFile = [System.IO.Path]::GetTempFileName()
+            $reportJson | Out-File -FilePath $tempFile -Encoding UTF8
 
-        Remove-Item $tempFile -Force
-        Write-Information "Report written to blob: $blobContainer/$blobName" -InformationAction Continue
+            Set-AzStorageBlobContent `
+                -Container $blobContainer `
+                -File $tempFile `
+                -Blob $blobName `
+                -Context $ctx `
+                -Force | Out-Null
+
+            Remove-Item $tempFile -Force
+            Write-Information "Report written to blob: $blobContainer/$blobName" -InformationAction Continue
+        }
     }
     catch {
         Write-Warning "Failed to write report to blob storage: $_"
