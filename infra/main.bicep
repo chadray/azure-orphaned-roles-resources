@@ -34,6 +34,10 @@ param cleanupScopes bool = false
 @description('Blob container name for report output.')
 param reportBlobContainer string = 'orphaned-role-reports'
 
+@description('App Service Plan SKU (use B1 if Consumption/Y1 quota is unavailable).')
+@allowed(['Y1', 'B1', 'B2', 'S1'])
+param appServicePlanSku string = 'B1'
+
 @description('Deploy the Azure Monitor Workbook.')
 param deployWorkbook bool = true
 
@@ -241,10 +245,12 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: appServicePlanName
   location: location
   sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
+    name: appServicePlanSku
+    tier: appServicePlanSku == 'Y1' ? 'Dynamic' : (startsWith(appServicePlanSku, 'S') ? 'Standard' : 'Basic')
   }
-  properties: {}
+  properties: {
+    reserved: false
+  }
 }
 
 // ── Function App ────────────────────────────────────────────────────
@@ -263,8 +269,6 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       powerShellVersion: '7.4'
       appSettings: [
         { name: 'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}' }
-        { name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}' }
-        { name: 'WEBSITE_CONTENTSHARE', value: toLower(functionAppName) }
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'powershell' }
         { name: 'FUNCTIONS_WORKER_RUNTIME_VERSION', value: '7.4' }
