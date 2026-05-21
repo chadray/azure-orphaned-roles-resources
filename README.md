@@ -143,24 +143,72 @@ The Function App's managed identity needs:
 
 ## Deployment
 
-### Prerequisites
+### One-Command Deploy
 
-- Azure Function App (PowerShell 7.4, v4 runtime)
-- System-assigned managed identity enabled
-- Role assignments granted per the permissions table above
-
-### Deploy
+The included deploy script provisions all Azure infrastructure and publishes the Function App in a single command:
 
 ```bash
-# Using Azure Functions Core Tools
-func azure functionapp publish <FunctionAppName>
-
-# Or via az CLI
-az functionapp deployment source config-zip \
-  --resource-group <RG> \
-  --name <FunctionAppName> \
-  --src <zip-file>
+./scripts/deploy.sh -g rg-orphaned-roles -s <subscription-id>
 ```
+
+This creates:
+- **Resource Group** (if it doesn't exist)
+- **Storage Account** — Function App runtime + report blob storage
+- **App Service Plan** — Consumption tier (Y1)
+- **Function App** — PowerShell 7.4 with system-assigned managed identity
+- **Application Insights** — linked to Log Analytics
+- **Log Analytics Workspace** — with custom tables for scan data
+- **Data Collection Endpoint + Rule** — for Logs Ingestion API
+- **Azure Monitor Workbook** — dashboard with Security tab
+- **Role Assignments** — Reader at scan scope + Monitoring Metrics Publisher on DCR
+
+Options:
+
+```bash
+./scripts/deploy.sh -g <resource-group> -s <subscription-id> [-l <location>] [-n <base-name>]
+
+  -g    Resource group name (created if needed)
+  -s    Subscription ID to scan
+  -l    Azure region (default: eastus)
+  -n    Base name for resources (default: orphroles)
+```
+
+### Manual / Customized Deploy
+
+If you prefer to deploy step-by-step:
+
+```bash
+# 1. Deploy infrastructure
+az deployment group create \
+  --resource-group <RG> \
+  --template-file infra/main.bicep \
+  --parameters scanScope=/subscriptions/<sub-id>
+
+# 2. Publish Function App code
+func azure functionapp publish <FunctionAppName> --powershell
+
+# 3. Import workbook manually via Azure Portal
+#    (Azure Monitor → Workbooks → + New → Advanced Editor → paste workbook JSON)
+```
+
+### Post-Deployment
+
+The deploy script handles most permissions, but you still need to grant **Entra ID read access** for principal validation:
+
+```bash
+# Grant Directory.Read.All to the Function App's managed identity
+# (requires Global Administrator or Privileged Role Administrator)
+az ad app permission add \
+  --id <function-app-app-id> \
+  --api 00000003-0000-0000-c000-000000000000 \
+  --api-permissions 7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role
+```
+
+### Prerequisites
+
+- Azure CLI with Bicep (`az bicep install`)
+- Azure Functions Core Tools v4 (`npm install -g azure-functions-core-tools@4`)
+- An Azure subscription with Owner or Contributor + User Access Administrator
 
 ### Local Development
 
@@ -226,11 +274,15 @@ Default: daily at 6:00 AM UTC (`0 0 6 * * *`). Modify in `TimerTriggerOrphanedRo
 │   └── images/                            # Screenshots for README
 │       ├── html-report.png
 │       └── csv-report.png
+├── infra/
+│   ├── main.bicep                         # Azure infrastructure (all resources)
+│   └── main.bicepparam                    # Parameter defaults
 ├── modules/
 │   ├── OrphanedRoleAssignments.psm1       # Core detection & cleanup logic
 │   └── LogAnalyticsIngestion.psm1         # Logs Ingestion API client
 ├── scripts/
 │   ├── convert-report.py                  # JSON → CSV / HTML converter
+│   ├── deploy.sh                          # One-command Azure deployment
 │   ├── patch-workbook.py                  # Adds Security tab to vendored workbook
 │   └── test-scan.ps1                      # Local dry-run harness
 ├── workbooks/
