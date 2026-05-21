@@ -53,7 +53,7 @@ OVERVIEW_TILE = {
         "query": (
             "OrphanedRoleScanSummary_CL\n"
             "| summarize arg_max(TimeGenerated, *)\n"
-            "| project type = \"Orphaned Role Assignments\", total_count = TotalOrphaned_d\n"
+            "| project type = \"Orphaned Role Assignments\", total_count = tolong(TotalOrphaned)\n"
             "| union (datatable(type:string, total_count:long) [\"Orphaned Role Assignments\", 0])\n"
             "| summarize total_count = max(total_count) by type"
         ),
@@ -91,61 +91,61 @@ LAST_SCAN_QUERY = (
     "OrphanedRoleScanSummary_CL\n"
     "| summarize arg_max(TimeGenerated, *)\n"
     "| project LastScan=format_datetime(TimeGenerated, 'yyyy-MM-dd HH:mm UTC'),\n"
-    "          ScanScope=ScanScope_s,\n"
-    "          TotalOrphaned=TotalOrphaned_d,\n"
-    "          Confirmed=ConfirmedCount_d,\n"
-    "          Suspected=SuspectedCount_d,\n"
-    "          OrphanedPrincipals=OrphanedPrincipalCount_d,\n"
-    "          OrphanedScopes=OrphanedScopeCount_d,\n"
-    "          ScanId=ScanId_s"
+    "          ScanScope,\n"
+    "          TotalOrphaned,\n"
+    "          Confirmed=ConfirmedCount,\n"
+    "          Suspected=SuspectedCount,\n"
+    "          OrphanedPrincipals=OrphanedPrincipalCount,\n"
+    "          OrphanedScopes=OrphanedScopeCount,\n"
+    "          ScanId"
 )
 
 LATEST_SCAN_ID_QUERY = (
     "OrphanedRoleScanSummary_CL\n"
-    "| summarize arg_max(TimeGenerated, ScanId_s)\n"
-    "| project ScanId_s"
+    "| summarize arg_max(TimeGenerated, ScanId)\n"
+    "| project ScanId"
 )
 
 TOTAL_COUNT_QUERY = (
     "OrphanedRoleScanSummary_CL\n"
     "| summarize arg_max(TimeGenerated, *)\n"
-    "| project type = \"microsoft.authorization/roleassignments\", total_count = tolong(TotalOrphaned_d)\n"
+    "| project type = \"microsoft.authorization/roleassignments\", total_count = tolong(TotalOrphaned)\n"
     "| union (datatable(type:string, total_count:long) [\"microsoft.authorization/roleassignments\", 0])\n"
     "| summarize total_count = max(total_count) by type"
 )
 
 BY_REASON_QUERY = (
-    "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId_s) | project ScanId_s);\n"
+    "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId) | project ScanId);\n"
     "OrphanedRoleAssignments_CL\n"
-    "| where ScanId_s == latestScan\n"
-    "| extend reason = split(OrphanReasons_s, ', ')\n"
+    "| where ScanId == latestScan\n"
+    "| extend reason = split(OrphanReasons, ', ')\n"
     "| mv-expand reason to typeof(string)\n"
     "| summarize count() by reason"
 )
 
 BY_STATUS_QUERY = (
-    "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId_s) | project ScanId_s);\n"
+    "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId) | project ScanId);\n"
     "OrphanedRoleAssignments_CL\n"
-    "| where ScanId_s == latestScan\n"
-    "| summarize count() by DetectionStatus_s"
+    "| where ScanId == latestScan\n"
+    "| summarize count() by DetectionStatus"
 )
 
 BY_ROLE_QUERY = (
-    "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId_s) | project ScanId_s);\n"
+    "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId) | project ScanId);\n"
     "OrphanedRoleAssignments_CL\n"
-    "| where ScanId_s == latestScan\n"
-    "| summarize count() by RoleDefinitionName_s"
+    "| where ScanId == latestScan\n"
+    "| summarize count() by RoleDefinitionName"
 )
 
 DETAIL_TABLE_QUERY = (
-    "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId_s) | project ScanId_s);\n"
+    "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId) | project ScanId);\n"
     "OrphanedRoleAssignments_CL\n"
-    "| where ScanId_s == latestScan\n"
+    "| where ScanId == latestScan\n"
     "| extend Details = pack_all()\n"
-    "| project RoleDefinitionName_s, PrincipalId_s, PrincipalType_s,\n"
-    "          DisplayName_s, Scope_s, OrphanReasons_s,\n"
-    "          DetectionStatus_s, CanSafelyDelete_b,\n"
-    "          ValidationNotes_s, ScannedAt_s, Details"
+    "| project RoleDefinitionName, PrincipalId, PrincipalType,\n"
+    "          DisplayName, Scope, OrphanReasons,\n"
+    "          DetectionStatus, CanSafelyDelete,\n"
+    "          ValidationNotes, ScannedAt, Details"
 )
 
 
@@ -376,7 +376,7 @@ def build_security_tab():
                                                 "linkLabel": "🔍 View Details",
                                                 "linkIsContextBlade": True
                                             }},
-                                            {"columnMatch": "CanSafelyDelete_b", "formatter": 18,
+                                            {"columnMatch": "CanSafelyDelete", "formatter": 18,
                                              "formatOptions": {
                                                 "thresholdsOptions": "icons",
                                                 "thresholdsGrid": [
@@ -392,16 +392,16 @@ def build_security_tab():
                                         "rowLimit": 1000,
                                         "filter": True,
                                         "labelSettings": [
-                                            {"columnId": "RoleDefinitionName_s", "label": "Role"},
-                                            {"columnId": "PrincipalId_s", "label": "Principal ID"},
-                                            {"columnId": "PrincipalType_s", "label": "Principal Type"},
-                                            {"columnId": "DisplayName_s", "label": "Display Name"},
-                                            {"columnId": "Scope_s", "label": "Scope"},
-                                            {"columnId": "OrphanReasons_s", "label": "Orphan Reason"},
-                                            {"columnId": "DetectionStatus_s", "label": "Status"},
-                                            {"columnId": "CanSafelyDelete_b", "label": "Safe to Delete"},
-                                            {"columnId": "ValidationNotes_s", "label": "Notes"},
-                                            {"columnId": "ScannedAt_s", "label": "Scanned At"},
+                                            {"columnId": "RoleDefinitionName", "label": "Role"},
+                                            {"columnId": "PrincipalId", "label": "Principal ID"},
+                                            {"columnId": "PrincipalType", "label": "Principal Type"},
+                                            {"columnId": "DisplayName", "label": "Display Name"},
+                                            {"columnId": "Scope", "label": "Scope"},
+                                            {"columnId": "OrphanReasons", "label": "Orphan Reason"},
+                                            {"columnId": "DetectionStatus", "label": "Status"},
+                                            {"columnId": "CanSafelyDelete", "label": "Safe to Delete"},
+                                            {"columnId": "ValidationNotes", "label": "Notes"},
+                                            {"columnId": "ScannedAt", "label": "Scanned At"},
                                             {"columnId": "Details", "label": "Details"}
                                         ]
                                     }

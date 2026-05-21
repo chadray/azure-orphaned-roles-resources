@@ -82,7 +82,7 @@
             "queryType": 8
           },
           {
-            "id": "f93078cb-0158-45aa-b0bc-c075011a9686",
+            "id": "c7b25621-cffa-45a9-b8ed-5b339dedcb02",
             "version": "KqlParameterItem/1.0",
             "name": "Workspace",
             "label": "Log Analytics Workspace",
@@ -162,7 +162,7 @@
             "style": "link"
           },
           {
-            "id": "adf75c79-af14-48f0-ab26-e6cc64821a7f",
+            "id": "50df4792-a689-4e8a-b51c-0a812f59d81b",
             "cellValue": "mainTab",
             "linkTarget": "parameter",
             "linkLabel": "Security",
@@ -1007,7 +1007,7 @@
             "type": 3,
             "content": {
               "version": "KqlItem/1.0",
-              "query": "OrphanedRoleScanSummary_CL\n| summarize arg_max(TimeGenerated, *)\n| project type = \"Orphaned Role Assignments\", total_count = TotalOrphaned_d\n| union (datatable(type:string, total_count:long) [\"Orphaned Role Assignments\", 0])\n| summarize total_count = max(total_count) by type",
+              "query": "OrphanedRoleScanSummary_CL\n| summarize arg_max(TimeGenerated, *)\n| project type = \"Orphaned Role Assignments\", total_count = tolong(TotalOrphaned)\n| union (datatable(type:string, total_count:long) [\"Orphaned Role Assignments\", 0])\n| summarize total_count = max(total_count) by type",
               "size": 3,
               "title": " ",
               "queryType": 0,
@@ -7973,7 +7973,7 @@
               "style": "tabs",
               "links": [
                 {
-                  "id": "22e46a01-2ae1-4731-a896-73f54419138e",
+                  "id": "27613188-e8bb-44c1-ac7e-0b84bbbcfbb4",
                   "cellValue": "securityTab",
                   "linkTarget": "parameter",
                   "linkLabel": "Orphaned Role Assignments",
@@ -8015,7 +8015,7 @@
                   "type": 3,
                   "content": {
                     "version": "KqlItem/1.0",
-                    "query": "OrphanedRoleScanSummary_CL\n| summarize arg_max(TimeGenerated, *)\n| project LastScan=format_datetime(TimeGenerated, 'yyyy-MM-dd HH:mm UTC'),\n          ScanScope=ScanScope_s,\n          TotalOrphaned=TotalOrphaned_d,\n          Confirmed=ConfirmedCount_d,\n          Suspected=SuspectedCount_d,\n          OrphanedPrincipals=OrphanedPrincipalCount_d,\n          OrphanedScopes=OrphanedScopeCount_d,\n          ScanId=ScanId_s",
+                    "query": "OrphanedRoleScanSummary_CL\n| summarize arg_max(TimeGenerated, *)\n| project LastScan=format_datetime(TimeGenerated, 'yyyy-MM-dd HH:mm UTC'),\n          ScanScope,\n          TotalOrphaned,\n          Confirmed=ConfirmedCount,\n          Suspected=SuspectedCount,\n          OrphanedPrincipals=OrphanedPrincipalCount,\n          OrphanedScopes=OrphanedScopeCount,\n          ScanId",
                     "size": 4,
                     "title": "Latest Scan",
                     "noDataMessage": "No scan data found. Run the Function App scanner to populate data.",
@@ -8068,7 +8068,7 @@
                   "type": 3,
                   "content": {
                     "version": "KqlItem/1.0",
-                    "query": "OrphanedRoleScanSummary_CL\n| summarize arg_max(TimeGenerated, *)\n| project type = \"microsoft.authorization/roleassignments\", total_count = tolong(TotalOrphaned_d)\n| union (datatable(type:string, total_count:long) [\"microsoft.authorization/roleassignments\", 0])\n| summarize total_count = max(total_count) by type",
+                    "query": "OrphanedRoleScanSummary_CL\n| summarize arg_max(TimeGenerated, *)\n| project type = \"microsoft.authorization/roleassignments\", total_count = tolong(TotalOrphaned)\n| union (datatable(type:string, total_count:long) [\"microsoft.authorization/roleassignments\", 0])\n| summarize total_count = max(total_count) by type",
                     "size": 4,
                     "title": "Total",
                     "queryType": 0,
@@ -8103,7 +8103,7 @@
                   "type": 3,
                   "content": {
                     "version": "KqlItem/1.0",
-                    "query": "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId_s) | project ScanId_s);\nOrphanedRoleAssignments_CL\n| where ScanId_s == latestScan\n| extend reason = split(OrphanReasons_s, ', ')\n| mv-expand reason to typeof(string)\n| summarize count() by reason",
+                    "query": "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId) | project ScanId);\nOrphanedRoleAssignments_CL\n| where ScanId == latestScan\n| extend reason = split(OrphanReasons, ', ')\n| mv-expand reason to typeof(string)\n| summarize count() by reason",
                     "size": 4,
                     "title": "Count by Orphan Reason",
                     "noDataMessage": "No data",
@@ -8125,7 +8125,7 @@
                   "type": 3,
                   "content": {
                     "version": "KqlItem/1.0",
-                    "query": "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId_s) | project ScanId_s);\nOrphanedRoleAssignments_CL\n| where ScanId_s == latestScan\n| summarize count() by DetectionStatus_s",
+                    "query": "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId) | project ScanId);\nOrphanedRoleAssignments_CL\n| where ScanId == latestScan\n| summarize count() by DetectionStatus",
                     "size": 4,
                     "title": "Count by Detection Status",
                     "noDataMessage": "No data",
@@ -8147,7 +8147,7 @@
                   "type": 3,
                   "content": {
                     "version": "KqlItem/1.0",
-                    "query": "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId_s) | project ScanId_s);\nOrphanedRoleAssignments_CL\n| where ScanId_s == latestScan\n| summarize count() by RoleDefinitionName_s",
+                    "query": "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId) | project ScanId);\nOrphanedRoleAssignments_CL\n| where ScanId == latestScan\n| summarize count() by RoleDefinitionName",
                     "size": 4,
                     "title": "Count by Role",
                     "noDataMessage": "No data",
@@ -8169,7 +8169,7 @@
                   "type": 3,
                   "content": {
                     "version": "KqlItem/1.0",
-                    "query": "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId_s) | project ScanId_s);\nOrphanedRoleAssignments_CL\n| where ScanId_s == latestScan\n| extend Details = pack_all()\n| project RoleDefinitionName_s, PrincipalId_s, PrincipalType_s,\n          DisplayName_s, Scope_s, OrphanReasons_s,\n          DetectionStatus_s, CanSafelyDelete_b,\n          ValidationNotes_s, ScannedAt_s, Details",
+                    "query": "let latestScan = toscalar(OrphanedRoleScanSummary_CL | summarize arg_max(TimeGenerated, ScanId) | project ScanId);\nOrphanedRoleAssignments_CL\n| where ScanId == latestScan\n| extend Details = pack_all()\n| project RoleDefinitionName, PrincipalId, PrincipalType,\n          DisplayName, Scope, OrphanReasons,\n          DetectionStatus, CanSafelyDelete,\n          ValidationNotes, ScannedAt, Details",
                     "size": 3,
                     "title": "Orphaned Role Assignments (Latest Scan)",
                     "noDataMessage": "No orphaned role assignments found in the latest scan.",
@@ -8192,7 +8192,7 @@
                           }
                         },
                         {
-                          "columnMatch": "CanSafelyDelete_b",
+                          "columnMatch": "CanSafelyDelete",
                           "formatter": 18,
                           "formatOptions": {
                             "thresholdsOptions": "icons",
@@ -8222,43 +8222,43 @@
                       "filter": true,
                       "labelSettings": [
                         {
-                          "columnId": "RoleDefinitionName_s",
+                          "columnId": "RoleDefinitionName",
                           "label": "Role"
                         },
                         {
-                          "columnId": "PrincipalId_s",
+                          "columnId": "PrincipalId",
                           "label": "Principal ID"
                         },
                         {
-                          "columnId": "PrincipalType_s",
+                          "columnId": "PrincipalType",
                           "label": "Principal Type"
                         },
                         {
-                          "columnId": "DisplayName_s",
+                          "columnId": "DisplayName",
                           "label": "Display Name"
                         },
                         {
-                          "columnId": "Scope_s",
+                          "columnId": "Scope",
                           "label": "Scope"
                         },
                         {
-                          "columnId": "OrphanReasons_s",
+                          "columnId": "OrphanReasons",
                           "label": "Orphan Reason"
                         },
                         {
-                          "columnId": "DetectionStatus_s",
+                          "columnId": "DetectionStatus",
                           "label": "Status"
                         },
                         {
-                          "columnId": "CanSafelyDelete_b",
+                          "columnId": "CanSafelyDelete",
                           "label": "Safe to Delete"
                         },
                         {
-                          "columnId": "ValidationNotes_s",
+                          "columnId": "ValidationNotes",
                           "label": "Notes"
                         },
                         {
-                          "columnId": "ScannedAt_s",
+                          "columnId": "ScannedAt",
                           "label": "Scanned At"
                         },
                         {
