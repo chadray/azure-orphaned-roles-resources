@@ -9,6 +9,11 @@
     "ENABLE_ROLE_ASSIGNMENT_CLEANUP": "false",
     "CLEANUP_ORPHANED_PRINCIPALS": "false",
     "CLEANUP_ORPHANED_SCOPES": "false",
-    "REPORT_OUTPUT_BLOB_CONTAINER": "orphaned-role-reports"
+    "REPORT_OUTPUT_BLOB_CONTAINER": "orphaned-role-reports",
+
+    "LOG_INGESTION_DCE_URI": "",
+    "LOG_INGESTION_DCR_IMMUTABLE_ID": "",
+    "LOG_INGESTION_STREAM_NAME": "Custom-OrphanedRoleAssignments_CL",
+    "LOG_INGESTION_SUMMARY_STREAM_NAME": "Custom-OrphanedRoleScanSummary_CL"
   }
 }

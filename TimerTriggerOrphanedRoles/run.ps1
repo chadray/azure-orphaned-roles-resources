@@ -15,6 +15,7 @@
 param($Timer)
 
 Import-Module "$PSScriptRoot/../modules/OrphanedRoleAssignments.psm1" -Force
+Import-Module "$PSScriptRoot/../modules/LogAnalyticsIngestion.psm1" -Force
 
 # ── Read configuration from app settings ──
 $scanScope          = if ($env:ORPHANED_ROLES_SCAN_SCOPE)     { $env:ORPHANED_ROLES_SCAN_SCOPE }     else { '/' }
@@ -22,6 +23,14 @@ $enableCleanup      = $env:ENABLE_ROLE_ASSIGNMENT_CLEANUP   -eq 'true'
 $cleanupPrincipals  = $env:CLEANUP_ORPHANED_PRINCIPALS      -eq 'true'
 $cleanupScopes      = $env:CLEANUP_ORPHANED_SCOPES          -eq 'true'
 $dryRun             = -not $enableCleanup
+$scanId             = [guid]::NewGuid().ToString()
+
+# Log Analytics ingestion settings (optional — enables workbook dashboard)
+$dceUri             = $env:LOG_INGESTION_DCE_URI
+$dcrImmutableId     = $env:LOG_INGESTION_DCR_IMMUTABLE_ID
+$streamName         = if ($env:LOG_INGESTION_STREAM_NAME)         { $env:LOG_INGESTION_STREAM_NAME }         else { 'Custom-OrphanedRoleAssignments_CL' }
+$summaryStreamName  = if ($env:LOG_INGESTION_SUMMARY_STREAM_NAME) { $env:LOG_INGESTION_SUMMARY_STREAM_NAME } else { 'Custom-OrphanedRoleScanSummary_CL' }
+$logAnalyticsEnabled = $dceUri -and $dcrImmutableId
 
 Write-Information "=== Orphaned Role Assignment Scanner ===" -InformationAction Continue
 Write-Information "Scan scope       : $scanScope" -InformationAction Continue
@@ -29,13 +38,33 @@ Write-Information "Cleanup enabled  : $enableCleanup" -InformationAction Continu
 Write-Information "Cleanup principals: $cleanupPrincipals" -InformationAction Continue
 Write-Information "Cleanup scopes   : $cleanupScopes" -InformationAction Continue
 Write-Information "Dry-run mode     : $dryRun" -InformationAction Continue
+Write-Information "Log Analytics    : $logAnalyticsEnabled" -InformationAction Continue
 Write-Information "========================================" -InformationAction Continue
 
 # ── Phase 1: Scan ──
 $orphaned = Find-OrphanedRoleAssignments -Scope $scanScope
 
 if ($orphaned.Count -eq 0) {
-    Write-Information "No orphaned role assignments found. Exiting." -InformationAction Continue
+    Write-Information "No orphaned role assignments found." -InformationAction Continue
+
+    # Still send summary to Log Analytics so the dashboard shows the latest scan
+    if ($logAnalyticsEnabled) {
+        try {
+            Send-OrphanedRolesToLogAnalytics `
+                -DceUri $dceUri `
+                -DcrImmutableId $dcrImmutableId `
+                -StreamName $streamName `
+                -SummaryStreamName $summaryStreamName `
+                -Assignments @() `
+                -ScanScope $scanScope `
+                -DryRun $dryRun `
+                -ScanId $scanId
+        }
+        catch {
+            Write-Warning "Log Analytics ingestion failed: $_"
+        }
+    }
+
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{ StatusCode = 200; Body = '{"message":"No orphaned role assignments found."}' }) -ErrorAction SilentlyContinue
     return
 }
@@ -108,3 +137,22 @@ if ($blobContainer -and $storageConnStr -and $storageConnStr -ne 'UseDevelopment
 }
 
 Write-Information "=== Scan complete ===" -InformationAction Continue
+
+# ── Phase 4: Ingest to Log Analytics (if configured) ──
+if ($logAnalyticsEnabled) {
+    Write-Information "Sending results to Log Analytics..." -InformationAction Continue
+    try {
+        Send-OrphanedRolesToLogAnalytics `
+            -DceUri $dceUri `
+            -DcrImmutableId $dcrImmutableId `
+            -StreamName $streamName `
+            -SummaryStreamName $summaryStreamName `
+            -Assignments $orphaned `
+            -ScanScope $scanScope `
+            -DryRun $dryRun `
+            -ScanId $scanId
+    }
+    catch {
+        Write-Warning "Log Analytics ingestion failed (scan results are still available in logs/blob): $_"
+    }
+}

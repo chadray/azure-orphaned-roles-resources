@@ -1,6 +1,6 @@
 # Orphaned Role Assignment Scanner
 
-Azure Function App (PowerShell) that detects and optionally removes orphaned Azure RBAC role assignments on a schedule.
+Azure Function App (PowerShell) that detects and optionally removes orphaned Azure RBAC role assignments on a schedule, with an integrated Azure Monitor Workbook dashboard.
 
 > Repo: [chadray/azure-orphaned-roles-resources](https://github.com/chadray/azure-orphaned-roles-resources)
 
@@ -24,6 +24,58 @@ Every run produces a JSON report with:
 - **CleanupResults** — action taken per assignment (`Deleted`, `WouldDelete`, `Skipped`, `Failed`)
 
 Reports are written to Function App logs and optionally to Azure Blob Storage.
+
+### Azure Monitor Workbook Dashboard
+
+The recommended way to visualize results is the integrated **Azure Monitor Workbook**. It combines orphaned RBAC role assignments (from the Function App scan) with orphaned Azure resources (via Azure Resource Graph) in a single dashboard.
+
+The workbook is based on [dolevshor/azure-orphan-resources](https://github.com/dolevshor/azure-orphan-resources) (MIT license) and extended with a **Security** tab for orphaned role assignments.
+
+**Tabs included:**
+
+| Tab | Data Source | Content |
+|-----|-------------|---------|
+| Overview | Resource Graph + Log Analytics | Tile counters for all orphaned resource types |
+| Compute | Resource Graph | App Service Plans, Availability Sets |
+| Storage | Resource Graph | Managed Disks |
+| Database | Resource Graph | SQL Elastic Pools |
+| Networking | Resource Graph | Public IPs, NICs, NSGs, Route Tables, Load Balancers, etc. |
+| Others | Resource Graph | Resource Groups, API Connections, Certificates |
+| **Security** | **Log Analytics** | **Orphaned role assignments — scan summary, pie charts, detail table** |
+
+> ℹ️ The Security tab shows scan-based data (updated each Function App run), not real-time Resource Graph data. The workbook surfaces the last scan timestamp prominently.
+
+#### Deploying the Workbook
+
+See [workbooks/README.md](workbooks/README.md) for full instructions. Quick start:
+
+1. Navigate to **Azure Monitor → Workbooks → + New → Advanced Editor**
+2. Select **Gallery Template** and paste the contents of [`workbooks/azure-orphaned-resources.workbook`](workbooks/azure-orphaned-resources.workbook)
+3. Click **Apply → Save**
+4. Select your **Subscription(s)** and **Log Analytics Workspace** from the filter bar
+
+#### Setting Up Log Analytics Ingestion
+
+The Function App pushes scan results to Log Analytics via the [Logs Ingestion API](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/logs-ingestion-api-overview) using managed identity (no shared keys).
+
+**Prerequisites:**
+
+1. **Log Analytics Workspace** — create one or use an existing workspace
+2. **Custom tables** — create `OrphanedRoleAssignments_CL` and `OrphanedRoleScanSummary_CL` in the workspace
+3. **Data Collection Endpoint (DCE)** — create a DCE in the same region as the workspace
+4. **Data Collection Rule (DCR)** — create a DCR that maps the ingestion streams to the custom tables
+5. **RBAC** — grant the Function App's managed identity `Monitoring Metrics Publisher` on the DCR
+
+**Configure the Function App** with these settings:
+
+| Setting | Value |
+|---------|-------|
+| `LOG_INGESTION_DCE_URI` | `https://<dce-name>.<region>.ingest.monitor.azure.com` |
+| `LOG_INGESTION_DCR_IMMUTABLE_ID` | `dcr-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| `LOG_INGESTION_STREAM_NAME` | `Custom-OrphanedRoleAssignments_CL` |
+| `LOG_INGESTION_SUMMARY_STREAM_NAME` | `Custom-OrphanedRoleScanSummary_CL` |
+
+When these settings are configured, the Function App will automatically push scan results (including zero-result scans) to Log Analytics after each run. If ingestion fails, scan results are still available in logs and blob storage.
 
 ### Converting Reports to CSV / HTML
 
@@ -69,19 +121,25 @@ The Function App's managed identity needs:
 | `Microsoft.Authorization/roleAssignments/read`   | Enumerate role assignments                 |
 | `Microsoft.Authorization/roleAssignments/delete` | Remove orphaned assignments (cleanup only) |
 | `Directory.Read.All` or equivalent Entra ID read | Confirm principal existence                |
+| `Monitoring Metrics Publisher` on DCR            | Push results to Log Analytics (dashboard only) |
 
 > **Recommended role for scan-only**: `Reader` + custom role with `Microsoft.Authorization/roleAssignments/read`
 > **Recommended role for cleanup**: `User Access Administrator` at the scan scope
+> **Workbook viewers** need: `Reader` on subscriptions + `Log Analytics Reader` on the workspace
 
 ## App Settings
 
-| Setting                          | Default                 | Description                                      |
-| -------------------------------- | ----------------------- | ------------------------------------------------ |
-| `ORPHANED_ROLES_SCAN_SCOPE`      | `/`                     | Azure scope to scan                              |
-| `ENABLE_ROLE_ASSIGNMENT_CLEANUP` | `false`                 | Set to `true` to enable the cleanup phase        |
-| `CLEANUP_ORPHANED_PRINCIPALS`    | `false`                 | Allow deletion of orphaned-principal assignments |
-| `CLEANUP_ORPHANED_SCOPES`        | `false`                 | Allow deletion of orphaned-scope assignments     |
-| `REPORT_OUTPUT_BLOB_CONTAINER`   | `orphaned-role-reports` | Blob container for report output                 |
+| Setting                              | Default                                  | Description                                      |
+| ------------------------------------ | ---------------------------------------- | ------------------------------------------------ |
+| `ORPHANED_ROLES_SCAN_SCOPE`          | `/`                                      | Azure scope to scan                              |
+| `ENABLE_ROLE_ASSIGNMENT_CLEANUP`     | `false`                                  | Set to `true` to enable the cleanup phase        |
+| `CLEANUP_ORPHANED_PRINCIPALS`        | `false`                                  | Allow deletion of orphaned-principal assignments |
+| `CLEANUP_ORPHANED_SCOPES`            | `false`                                  | Allow deletion of orphaned-scope assignments     |
+| `REPORT_OUTPUT_BLOB_CONTAINER`       | `orphaned-role-reports`                  | Blob container for report output                 |
+| `LOG_INGESTION_DCE_URI`              | *(empty — disables ingestion)*           | Data Collection Endpoint URI                     |
+| `LOG_INGESTION_DCR_IMMUTABLE_ID`     | *(empty — disables ingestion)*           | Data Collection Rule immutable ID                |
+| `LOG_INGESTION_STREAM_NAME`          | `Custom-OrphanedRoleAssignments_CL`      | DCR stream for assignment detail records         |
+| `LOG_INGESTION_SUMMARY_STREAM_NAME`  | `Custom-OrphanedRoleScanSummary_CL`      | DCR stream for scan summary records              |
 
 ## Deployment
 
@@ -169,10 +227,15 @@ Default: daily at 6:00 AM UTC (`0 0 6 * * *`). Modify in `TimerTriggerOrphanedRo
 │       ├── html-report.png
 │       └── csv-report.png
 ├── modules/
-│   └── OrphanedRoleAssignments.psm1       # Core logic (reusable module)
+│   ├── OrphanedRoleAssignments.psm1       # Core detection & cleanup logic
+│   └── LogAnalyticsIngestion.psm1         # Logs Ingestion API client
 ├── scripts/
 │   ├── convert-report.py                  # JSON → CSV / HTML converter
+│   ├── patch-workbook.py                  # Adds Security tab to vendored workbook
 │   └── test-scan.ps1                      # Local dry-run harness
+├── workbooks/
+│   ├── azure-orphaned-resources.workbook  # Azure Monitor Workbook (patched)
+│   └── README.md                          # Workbook attribution & deployment
 └── TimerTriggerOrphanedRoles/
     ├── function.json                      # Timer trigger binding
     └── run.ps1                            # Function entry point

@@ -6,6 +6,8 @@ local.settings.json
 test
 tests
 scripts
+docs
+workbooks
 last-scan-report.json
 sample-report.json
 *.scan-report.json
