@@ -120,24 +120,32 @@ echo "→ Publishing Function App code..."
 cd "$REPO_ROOT"
 func azure functionapp publish "$FUNC_APP_NAME" --powershell
 
-# Deploy workbook (too large for Bicep loadTextContent)
+# Deploy workbook (too large for Bicep loadTextContent or inline az rest)
 echo "→ Deploying Azure Monitor Workbook..."
 WORKBOOK_ID=$(python3 -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_DNS, '$RESOURCE_GROUP-orphaned-workbook'))")
-WORKBOOK_CONTENT=$(python3 -c "import json; print(json.dumps(json.dumps(json.load(open('$REPO_ROOT/workbooks/azure-orphaned-resources.workbook')))))")
+
+python3 -c "
+import json
+wb = json.load(open('$REPO_ROOT/workbooks/azure-orphaned-resources.workbook'))
+body = {
+    'location': '$LOCATION',
+    'kind': 'shared',
+    'properties': {
+        'displayName': 'Orphaned Azure Resources & Role Assignments',
+        'category': 'workbook',
+        'sourceId': 'Azure Monitor',
+        'serializedData': json.dumps(wb)
+    }
+}
+json.dump(body, open('/tmp/workbook-deploy-body.json', 'w'))
+"
 
 az rest --method PUT \
   --url "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Insights/workbooks/$WORKBOOK_ID?api-version=2023-06-01" \
-  --body "{
-    \"location\": \"$LOCATION\",
-    \"kind\": \"shared\",
-    \"properties\": {
-      \"displayName\": \"Orphaned Azure Resources & Role Assignments\",
-      \"category\": \"workbook\",
-      \"sourceId\": \"Azure Monitor\",
-      \"serializedData\": $WORKBOOK_CONTENT
-    }
-  }" \
+  --body @/tmp/workbook-deploy-body.json \
   --output none 2>/dev/null && echo "  Workbook deployed successfully" || echo "  ⚠️  Workbook deployment failed — import manually via Azure Portal"
+
+rm -f /tmp/workbook-deploy-body.json
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
