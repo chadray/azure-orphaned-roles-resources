@@ -82,7 +82,7 @@
             "queryType": 8
           },
           {
-            "id": "c7b25621-cffa-45a9-b8ed-5b339dedcb02",
+            "id": "9e32e01a-6d99-44cb-be4d-c2f970be2077",
             "version": "KqlParameterItem/1.0",
             "name": "Workspace",
             "label": "Log Analytics Workspace",
@@ -93,7 +93,12 @@
               "{Subscription}"
             ],
             "typeSettings": {
-              "additionalResourceOptions": [],
+              "resourceTypeFilter": {
+                "microsoft.operationalinsights/workspaces": true
+              },
+              "additionalResourceOptions": [
+                "value::1"
+              ],
               "showDefault": false
             },
             "queryType": 1,
@@ -162,7 +167,7 @@
             "style": "link"
           },
           {
-            "id": "50df4792-a689-4e8a-b51c-0a812f59d81b",
+            "id": "34293313-42aa-4018-9997-c89b2fdc6902",
             "cellValue": "mainTab",
             "linkTarget": "parameter",
             "linkLabel": "Security",
@@ -7973,7 +7978,7 @@
               "style": "tabs",
               "links": [
                 {
-                  "id": "27613188-e8bb-44c1-ac7e-0b84bbbcfbb4",
+                  "id": "7ae91b80-a5be-4ae2-bd1e-4a129355155e",
                   "cellValue": "securityTab",
                   "linkTarget": "parameter",
                   "linkLabel": "Orphaned Role Assignments",

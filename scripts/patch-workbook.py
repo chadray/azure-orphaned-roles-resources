@@ -28,7 +28,10 @@ WORKSPACE_PARAMETER = {
     ),
     "crossComponentResources": ["{Subscription}"],
     "typeSettings": {
-        "additionalResourceOptions": [],
+        "resourceTypeFilter": {
+            "microsoft.operationalinsights/workspaces": True
+        },
+        "additionalResourceOptions": ["value::1"],
         "showDefault": False
     },
     "queryType": 1,
