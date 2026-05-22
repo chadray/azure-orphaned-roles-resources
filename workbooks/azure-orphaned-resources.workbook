@@ -82,7 +82,7 @@
             "queryType": 8
           },
           {
-            "id": "9e32e01a-6d99-44cb-be4d-c2f970be2077",
+            "id": "0b8af840-9c51-4848-83b6-4a89d596ddd2",
             "version": "KqlParameterItem/1.0",
             "name": "Workspace",
             "label": "Log Analytics Workspace",
@@ -167,7 +167,7 @@
             "style": "link"
           },
           {
-            "id": "34293313-42aa-4018-9997-c89b2fdc6902",
+            "id": "a918718d-7fef-44e7-8721-72fd99186625",
             "cellValue": "mainTab",
             "linkTarget": "parameter",
             "linkLabel": "Security",
@@ -7978,7 +7978,7 @@
               "style": "tabs",
               "links": [
                 {
-                  "id": "7ae91b80-a5be-4ae2-bd1e-4a129355155e",
+                  "id": "26c714af-9966-422a-b98e-8b82e86b4957",
                   "cellValue": "securityTab",
                   "linkTarget": "parameter",
                   "linkLabel": "Orphaned Role Assignments",
@@ -8020,7 +8020,7 @@
                   "type": 3,
                   "content": {
                     "version": "KqlItem/1.0",
-                    "query": "OrphanedRoleScanSummary_CL\n| summarize arg_max(TimeGenerated, *)\n| project LastScan=format_datetime(TimeGenerated, 'yyyy-MM-dd HH:mm UTC'),\n          ScanScope,\n          TotalOrphaned,\n          Confirmed=ConfirmedCount,\n          Suspected=SuspectedCount,\n          OrphanedPrincipals=OrphanedPrincipalCount,\n          OrphanedScopes=OrphanedScopeCount,\n          ScanId",
+                    "query": "OrphanedRoleScanSummary_CL\n| summarize arg_max(TimeGenerated, *)\n| project LastScan=TimeGenerated,\n          ScanScope,\n          TotalOrphaned,\n          Confirmed=ConfirmedCount,\n          Suspected=SuspectedCount,\n          OrphanedPrincipals=OrphanedPrincipalCount,\n          OrphanedScopes=OrphanedScopeCount,\n          ScanId",
                     "size": 4,
                     "title": "Latest Scan",
                     "noDataMessage": "No scan data found. Run the Function App scanner to populate data.",

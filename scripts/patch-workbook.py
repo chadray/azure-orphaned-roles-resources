@@ -93,7 +93,7 @@ OVERVIEW_TILE = {
 LAST_SCAN_QUERY = (
     "OrphanedRoleScanSummary_CL\n"
     "| summarize arg_max(TimeGenerated, *)\n"
-    "| project LastScan=format_datetime(TimeGenerated, 'yyyy-MM-dd HH:mm UTC'),\n"
+    "| project LastScan=TimeGenerated,\n"
     "          ScanScope,\n"
     "          TotalOrphaned,\n"
     "          Confirmed=ConfirmedCount,\n"
